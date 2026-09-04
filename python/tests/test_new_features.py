@@ -60,12 +60,16 @@ def test_image_loader_rejects_non_image():
 
 
 def test_image_loader_ocr_called():
-    with patch("pytesseract.image_to_string", return_value="extracted text from image"):
-        with patch("PIL.Image.open", return_value=MagicMock()):
-            loader = ImageLoader(engine="tesseract")
-            doc = loader.load("test.png")
-            assert doc.source_type == SourceType.IMAGE
-            assert doc.metadata["ocr_engine"] == "tesseract"
+    mock_pytesseract = MagicMock()
+    mock_pytesseract.image_to_string.return_value = "extracted text from image"
+    mock_pil = MagicMock()
+    mock_pil.Image.open.return_value = MagicMock()
+
+    with patch.dict("sys.modules", {"pytesseract": mock_pytesseract, "PIL": mock_pil, "PIL.Image": mock_pil.Image}):
+        loader = ImageLoader(engine="tesseract")
+        doc = loader.load("test.png")
+        assert doc.source_type == SourceType.IMAGE
+        assert doc.metadata["ocr_engine"] == "tesseract"
 
 
 def test_image_loader_missing_deps():
