@@ -1,0 +1,23 @@
+# Core — required for all patterns
+chromadb>=0.4.0
+
+# PDF ingestion
+pypdf>=4.0.0
+
+# Web ingestion
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+
+# Local embeddings (no API key needed)
+sentence-transformers>=2.7.0
+
+# Hybrid retrieval
+rank-bm25>=0.2.2
+
+# LLM providers (install what you need)
+# openai>=1.0.0
+# anthropic>=0.25.0
+# boto3>=1.34.0        # AWS Bedrock
+
+# Testing
+pytest>=7.4.0
