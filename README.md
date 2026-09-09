@@ -2,7 +2,7 @@
 
 ![CI](https://github.com/TushGoel/rag-patterns/actions/workflows/ci.yml/badge.svg)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
-![Tests](https://img.shields.io/badge/tests-93%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-111%20passing-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 Production RAG patterns in Python — multimodal ingestion (PDF, images, audio, code, web, text), composable chunking strategies, hybrid retrieval, LLM-as-judge evaluation, real-time observability, and Kafka-backed event streaming. Works with any LLM provider (OpenAI, Anthropic, Bedrock, Gemini, Ollama), any vector store.
@@ -244,6 +244,33 @@ all_chunks = builder.build(base_chunks)
 retriever.index(all_chunks)
 ```
 
+### 11. Role-Based Retrieval Access Control
+
+```python
+from python.retrieval.access_control import AccessControlledRetriever
+
+# Wrap any existing retriever — VectorRetriever, HybridRetriever, RerankedRetriever
+retriever = AccessControlledRetriever(HybridRetriever(store=store, embedder=embedder))
+
+# Chunks carry an "allowed_roles" metadata tag set at index time
+retriever.index(chunks)   # e.g. chunk.metadata = {"allowed_roles": ["finance"]}
+
+result = retriever.retrieve("Q4 budget projections", caller_roles=("finance",), top_k=5)
+print(result.denied_count)          # chunks filtered out for this caller
+for event in retriever.audit_log:   # defensibility / compliance trail
+    print(event.to_dict())
+# {'event_id': '...', 'caller_roles': ['finance'], 'total_candidates': 15,
+#  'permitted_count': 4, 'denied_count': 11, 'denied_sources': ['eng.md', ...]}
+```
+
+| | |
+|---|---|
+| **Problem** | A shared vector store mixes documents scoped to different teams, customers, or sensitivity levels. Retrieval has no notion of who's asking — whatever's in the corpus reaches the LLM context (and the end user) regardless of authorization. |
+| **Solution** | Tag chunks with the role(s) required to view them, then filter retrieved candidates by the caller's granted roles *before* they're assembled into context — filtering happens outside the LLM, not via a prompt instruction. Every filtering decision is logged to an audit trail. |
+| **Impact** | No unauthorized document ever reaches the context window. Fails closed by default: missing ACL metadata or an unauthenticated caller is denied, not treated as public — the safer default for a security-relevant filter. |
+
+**Why fail closed:** many ad-hoc ACL implementations default to "allow" when metadata is absent, because it's the path of least friction during development. That default silently turns every un-tagged document into an accidental leak the moment real data lands in the corpus. `AccessControlledRetriever` denies by default — a document must be explicitly tagged with `allowed_roles` to be retrievable at all.
+
 ---
 
 ## Project Structure
@@ -263,7 +290,8 @@ rag-patterns/
 │   │   ├── pipeline.py              # Vector, Hybrid (RRF), Reranked retrieval
 │   │   ├── hyde.py                  # Hypothetical Document Embedding (Staff)
 │   │   ├── query_decomposer.py      # Multi-hop query decomposition (Staff)
-│   │   └── agentic.py               # Self-correcting retrieval loop (Staff)
+│   │   ├── agentic.py               # Self-correcting retrieval loop (Staff)
+│   │   └── access_control.py        # Role-based retrieval filtering + audit log
 │   ├── providers/
 │   │   ├── llm.py                   # OpenAI, Anthropic, Bedrock, Gemini, Ollama
 │   │   ├── embeddings.py            # Local (sentence-transformers), OpenAI, Mock
@@ -276,7 +304,7 @@ rag-patterns/
 │       └── kafka_stream.py          # Kafka-backed retrieval event streaming
 ├── python/query/
 │   └── merger.py                    # ConcatMerger, SummaryMerger, StructuredMerger
-└── python/tests/                    # 93 tests — all patterns covered
+└── python/tests/                    # 111 tests — all patterns covered
 ```
 
 ---
