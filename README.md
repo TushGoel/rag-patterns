@@ -2,7 +2,7 @@
 
 ![CI](https://github.com/TushGoel/rag-patterns/actions/workflows/ci.yml/badge.svg)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
-![Tests](https://img.shields.io/badge/tests-124%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-147%20passing-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 Production RAG patterns in Python — multimodal ingestion (PDF, images, audio, code, web, text), composable chunking strategies, hybrid retrieval, LLM-as-judge evaluation, real-time observability, and Kafka-backed event streaming. Works with any LLM provider (OpenAI, Anthropic, Bedrock, Gemini, Ollama), any vector store.
@@ -302,6 +302,37 @@ print(cache.stats())
 
 ---
 
+### 13. Guardrails — Input/Output Validation
+
+```python
+from python.eval.guardrails import Guardrails, OutputVerdict
+
+guardrails = Guardrails(max_input_length=2000)
+
+input_result = guardrails.check_input(user_query)
+if not input_result.allowed:
+    return refuse(input_result.reasons)
+# e.g. reasons=["matched 1 prompt-injection pattern(s)"]
+
+response = llm.complete(user_query, context=context)
+output_result = guardrails.check_output(response.content)
+
+if output_result.verdict == OutputVerdict.FLAGGED:
+    log_silent_failure(output_result)   # model refused/deflected — don't treat as success
+
+return output_result.text   # PII already redacted: "Contact [REDACTED_EMAIL] for details."
+```
+
+| | |
+|---|---|
+| **Problem** | Two RAG failure modes look identical to "it worked" unless something checks for them: a crafted query overriding system instructions (prompt injection), and a response that silently refuses or leaks PII pulled from retrieved context. Neither raises an exception. |
+| **Solution** | Validate input before it reaches a prompt (length limits, prompt-injection heuristics) and validate output before it reaches the caller (PII detection + redaction, refusal-pattern detection). Both run outside the LLM call, so they catch what the model has no incentive to flag itself. |
+| **Impact** | Prompt-injection attempts and oversized queries are blocked before generation runs. PII never reaches the caller unredacted. Silent refusals are surfaced as a distinct, loggable verdict instead of looking like a successful answer. |
+
+**Why regex heuristics, not a classifier:** these checks run with no external services and no model calls — good enough to catch common shapes (SSNs, emails, "ignore previous instructions" phrasing) offline and deterministically. `InputGuardrail` / `OutputGuardrail` take custom pattern lists, so a real PII/injection classifier can sit behind the same interface in production.
+
+---
+
 ## Project Structure
 
 ```
@@ -328,13 +359,14 @@ rag-patterns/
 │   │   └── vector_store.py          # ChromaDB, Pinecone, pgvector
 │   ├── eval/
 │   │   ├── metrics.py               # Faithfulness, relevance, eval pipeline
-│   │   └── dashboard.py             # Self-contained HTML eval report + charts
+│   │   ├── dashboard.py             # Self-contained HTML eval report + charts
+│   │   └── guardrails.py            # Input/output validation: injection, PII, refusals
 │   └── observability/
 │       ├── retrieval_monitor.py     # Real-time anomaly detection (in-memory)
 │       └── kafka_stream.py          # Kafka-backed retrieval event streaming
 ├── python/query/
 │   └── merger.py                    # ConcatMerger, SummaryMerger, StructuredMerger
-└── python/tests/                    # 124 tests — all patterns covered
+└── python/tests/                    # 147 tests — all patterns covered
 ```
 
 ---
