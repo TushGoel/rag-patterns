@@ -2,7 +2,7 @@
 
 ![CI](https://github.com/TushGoel/rag-patterns/actions/workflows/ci.yml/badge.svg)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
-![Tests](https://img.shields.io/badge/tests-111%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-124%20passing-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 Production RAG patterns in Python — multimodal ingestion (PDF, images, audio, code, web, text), composable chunking strategies, hybrid retrieval, LLM-as-judge evaluation, real-time observability, and Kafka-backed event streaming. Works with any LLM provider (OpenAI, Anthropic, Bedrock, Gemini, Ollama), any vector store.
@@ -273,6 +273,35 @@ for event in retriever.audit_log:   # defensibility / compliance trail
 
 ---
 
+### 12. Semantic Caching
+
+```python
+from python.retrieval.semantic_cache import SemanticCache
+
+cache = SemanticCache(embedder=embedder, similarity_threshold=0.92, ttl_seconds=300)
+
+cached = cache.get("What impact does chunk size have on retrieval quality?")
+if cached.hit:
+    print(cached.matched_query)   # "How does chunking affect retrieval quality?"
+    print(cached.similarity)      # 0.979 — served without hitting the retriever/LLM
+else:
+    result = retriever.retrieve(query)
+    cache.set(query, result)
+
+print(cache.stats())
+# {'size': 1, 'hits': 1, 'misses': 1, 'hit_rate': 0.5}
+```
+
+| | |
+|---|---|
+| **Problem** | Exact-match caching misses on paraphrases — "How does chunking affect retrieval quality?" and "What impact does chunk size have on retrieval quality?" are the same question but different cache keys, so every rewording pays full retrieval + generation cost and latency again. |
+| **Solution** | Embed the incoming query and compare it against cached query embeddings by cosine similarity. A hit means "semantically close enough" (above a configurable threshold), not "identical text." Entries expire on a TTL and the oldest entry is evicted once the cache exceeds a max size. |
+| **Impact** | Paraphrased queries with the same intent reuse a prior result instead of re-running retrieval and generation — lower latency and cost on repeat-intent traffic, with a tunable threshold to trade hit rate against precision. |
+
+**Why cosine similarity, not embedding-store lookup:** the cache is small and short-lived by design (bounded by `max_size` and `ttl_seconds`), so a linear scan over cached embeddings is fast enough without standing up a second vector index just for the cache layer.
+
+---
+
 ## Project Structure
 
 ```
@@ -291,7 +320,8 @@ rag-patterns/
 │   │   ├── hyde.py                  # Hypothetical Document Embedding (Staff)
 │   │   ├── query_decomposer.py      # Multi-hop query decomposition (Staff)
 │   │   ├── agentic.py               # Self-correcting retrieval loop (Staff)
-│   │   └── access_control.py        # Role-based retrieval filtering + audit log
+│   │   ├── access_control.py        # Role-based retrieval filtering + audit log
+│   │   └── semantic_cache.py        # Similarity-keyed cache with TTL + eviction
 │   ├── providers/
 │   │   ├── llm.py                   # OpenAI, Anthropic, Bedrock, Gemini, Ollama
 │   │   ├── embeddings.py            # Local (sentence-transformers), OpenAI, Mock
@@ -304,7 +334,7 @@ rag-patterns/
 │       └── kafka_stream.py          # Kafka-backed retrieval event streaming
 ├── python/query/
 │   └── merger.py                    # ConcatMerger, SummaryMerger, StructuredMerger
-└── python/tests/                    # 111 tests — all patterns covered
+└── python/tests/                    # 124 tests — all patterns covered
 ```
 
 ---
