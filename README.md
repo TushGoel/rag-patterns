@@ -7,7 +7,7 @@
 
 Production RAG patterns in Python — multimodal ingestion (PDF, images, audio, code, web, text), composable chunking strategies, hybrid retrieval, LLM-as-judge evaluation, real-time observability, and Kafka-backed event streaming. Works with any LLM provider (OpenAI, Anthropic, Bedrock, Gemini, Ollama), any vector store.
 
-Built against patterns used in production AI platforms that process millions of documents and queries daily.
+Patterns built for the failure modes real RAG systems hit in production — silent retrieval failures, ungrounded answers, and permission leaks that only surface after users report them.
 
 ---
 
