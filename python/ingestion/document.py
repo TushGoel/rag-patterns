@@ -55,8 +55,7 @@ class PDFLoader:
     """
     Load PDF files preserving page structure.
 
-    Uses pypdf for text extraction. Falls back to pdfplumber for
-    complex layouts (tables, multi-column). Page numbers are embedded
+    Uses pypdf for text extraction. Page numbers are embedded
     in metadata so citations can reference exact pages.
     """
 
@@ -91,9 +90,11 @@ class CodeLoader:
     """
     Load source code repositories or individual files.
 
-    Traverses directory trees, respects .gitignore patterns,
-    detects programming language from extension, and preserves
-    file path in metadata for context-aware retrieval.
+    Traverses directory trees, skips common build/dependency
+    directories (.git, node_modules, .venv, dist, build, etc. — a
+    fixed list, not real .gitignore parsing), detects programming
+    language from extension, and preserves file path in metadata
+    for context-aware retrieval.
     """
 
     SUPPORTED_EXTENSIONS = {
@@ -165,9 +166,9 @@ class WebLoader:
     """
     Load web pages — URL to clean text, boilerplate stripped.
 
-    Removes navigation, footers, ads, and script/style tags.
-    Preserves article/main content. Respects robots.txt via
-    a simple user-agent header.
+    Removes navigation, footer, header, aside, form, and script/style
+    tags. Preserves article/main content. Sends a descriptive
+    user-agent header; does not check or honor robots.txt.
     """
 
     def load(self, url: str, timeout: int = 10) -> Document:

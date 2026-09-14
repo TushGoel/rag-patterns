@@ -5,7 +5,7 @@
 ![Tests](https://img.shields.io/badge/tests-147%20passing-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-Production RAG patterns in Python — multimodal ingestion (PDF, images, audio, code, web, text), composable chunking strategies, hybrid retrieval, LLM-as-judge evaluation, real-time observability, and Kafka-backed event streaming. Works with any LLM provider (OpenAI, Anthropic, Bedrock, Gemini, Ollama), any vector store.
+Production RAG patterns in Python — multimodal ingestion (PDF, images, audio, code, web, text), composable chunking strategies, hybrid retrieval, LLM-as-judge evaluation, real-time observability, and Kafka-backed event streaming. Works with any LLM provider (OpenAI, Anthropic, Bedrock, Gemini, Ollama). Vector store backend is pluggable — Chroma is implemented; Pinecone and pgvector are defined interfaces, not yet implemented.
 
 Patterns built for the failure modes real RAG systems hit in production — silent retrieval failures, ungrounded answers, and permission leaks that only surface after users report them.
 
@@ -16,7 +16,7 @@ Patterns built for the failure modes real RAG systems hit in production — sile
 | | |
 |---|---|
 | **Problem** | RAG systems fail silently. Wrong chunk size loses context. Auto-commit retrieval has no quality signal. Hallucinations are invisible until users report them. No two providers behave the same way. |
-| **Solution** | Five composable patterns: multimodal ingestion, three chunking strategies with benchmarking, hybrid retrieval with reranking, LLM-as-judge evaluation, and real-time retrieval observability. |
+| **Solution** | Composable patterns across the full pipeline: multimodal ingestion, three chunking strategies with benchmarking, hybrid retrieval with reranking, query decomposition, HyDE, agentic self-correction, RAPTOR, LLM-as-judge evaluation, RBAC-gated retrieval, semantic caching, guardrails, and real-time retrieval observability. |
 | **Impact** | Measurable retrieval quality, grounded answers, provider-agnostic deployment, and anomaly detection before users notice degradation. |
 
 ---
@@ -28,7 +28,7 @@ graph TD
     A[Any Source\nPDF · Code · Web · Text] --> B[Ingestion Layer\nauto-detect type]
     B --> C[Chunking\nFixed · Semantic · Recursive]
     C --> D[Embedder\nLocal · OpenAI · Bedrock]
-    D --> E[(Vector Store\nChroma · Pinecone · pgvector)]
+    D --> E[(Vector Store\nChroma - implemented\nPinecone/pgvector - interface only)]
 
     F[User Query] --> G[Retrieval\nVector · Hybrid · Reranked]
     E --> G
@@ -61,7 +61,7 @@ print(doc.word_count)    # 1842
 print(doc.metadata)      # {"page": 1, "total_pages": 12}
 ```
 
-**Supported:** PDF (layout-preserving), source code repos (language detection, .gitignore aware), web pages (boilerplate stripped), plain text / markdown.
+**Supported:** PDF (page-aware text extraction), source code repos (language detection, common build-dir exclusions), web pages (boilerplate stripped), plain text / markdown.
 
 ---
 
@@ -183,7 +183,7 @@ print(monitor.stats())
 # {'total_queries': 247, 'avg_latency_ms': 89.3, 'avg_relevance_score': 0.74, 'total_anomalies': 3}
 ```
 
-**Why stream retrieval telemetry:** At production scale, batch analytics miss latency spikes and relevance degradation. Streaming every query enables SLO enforcement, per-caller quality tracking, and provider health monitoring in real time.
+**Why stream retrieval telemetry:** Batch analytics miss latency spikes and relevance degradation between runs. Streaming every query enables SLO enforcement, per-caller quality tracking, and provider health monitoring in real time.
 
 ---
 
@@ -356,7 +356,7 @@ rag-patterns/
 │   ├── providers/
 │   │   ├── llm.py                   # OpenAI, Anthropic, Bedrock, Gemini, Ollama
 │   │   ├── embeddings.py            # Local (sentence-transformers), OpenAI, Mock
-│   │   └── vector_store.py          # ChromaDB, Pinecone, pgvector
+│   │   └── vector_store.py          # ChromaDB (implemented); Pinecone/pgvector (interface only)
 │   ├── eval/
 │   │   ├── metrics.py               # Faithfulness, relevance, eval pipeline
 │   │   ├── dashboard.py             # Self-contained HTML eval report + charts

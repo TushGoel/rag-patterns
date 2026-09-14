@@ -44,7 +44,7 @@ pytest python/tests/test_retrieval.py -v
 pytest python/tests/test_retrieval.py::test_vector_retriever_returns_results -v
 ```
 
-All 93+ existing tests must stay green. If your change touches a shared
+All 147 existing tests must stay green. If your change touches a shared
 module (`providers/`, `chunking/strategies.py`), run the full suite before
 opening a PR — several other patterns import from those modules.
 

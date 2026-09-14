@@ -4,10 +4,13 @@ Kafka-backed retrieval event streaming.
 Publishes every RAG query as a Kafka event — enabling real-time
 retrieval quality monitoring, SLO enforcement, and per-caller analytics.
 
-Integrates with kafka-patterns:
-  - Uses ReliableProducer (acks=all, idempotent delivery)
-  - Schema matches kafka-patterns LLMInvocationEvent pattern
-  - Downstream consumers can use kafka-patterns InferenceMonitor logic
+Related to kafka-patterns:
+  - Uses confluent_kafka.Producer directly, configured for acks=all
+    and idempotent delivery — same reliability settings as
+    kafka-patterns' ReliableProducer, but not that class itself
+  - Similar telemetry-event style to kafka-patterns' LLMInvocationEvent
+    (partial field overlap: event_id, latency_ms, caller_id,
+    timestamp_ms), not a schema match
 
 Falls back to in-memory (RetrievalMonitor) when Kafka is unavailable.
 This makes the pattern testable without a running Kafka broker.
