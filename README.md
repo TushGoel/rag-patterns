@@ -26,17 +26,22 @@ Patterns built for the failure modes real RAG systems hit in production — sile
 ```mermaid
 graph TD
     A[Any Source\nPDF · Code · Web · Text] --> B[Ingestion Layer\nauto-detect type]
-    B --> C[Chunking\nFixed · Semantic · Recursive]
+    B --> C[Chunking\nFixed · Semantic · RAPTOR tree]
     C --> D[Embedder\nLocal · OpenAI · Bedrock]
     D --> E[(Vector Store\nChroma - implemented\nPinecone/pgvector - interface only)]
 
-    F[User Query] --> G[Retrieval\nVector · Hybrid · Reranked]
+    F[User Query] --> F2[HyDE / Decomposition\nquery rewrite]
+    F2 --> G[Retrieval\nVector · Hybrid · Reranked]
     E --> G
-    G --> H[LLM Provider\nOpenAI · Anthropic · Bedrock · Ollama]
+    G --> RBAC[Fail-Closed RBAC\nno ACL metadata = never returned]
+    RBAC --> CACHE[Semantic Cache\nsimilarity threshold]
+    CACHE --> AGENT[Agentic Loop\nchecks its own sufficiency]
+    AGENT --> H[LLM Provider\nOpenAI · Anthropic · Bedrock · Ollama]
     H --> I[Answer]
 
-    G --> J[Eval\nFaithfulness · Relevance]
+    AGENT --> J[LLM-as-Judge Eval\nFaithfulness · Relevance]
     G --> K[Observability\nLatency SLO · Empty Results · Low Relevance]
+
 ```
 
 ---
